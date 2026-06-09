@@ -2,12 +2,12 @@
 
 ## Why
 
-## Install
+## Install with [lazy.nvim](https://github.com/folke/lazy.nvim)
 
-## With vim-tmux-navigator
+### With vim-tmux-navigator
 
 ```lua
-{
+return {
   "gabrielsugai/kamui.nvim",
   dependencies = { "christoomey/vim-tmux-navigator" },
     init = function()
