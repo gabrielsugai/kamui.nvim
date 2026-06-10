@@ -4,15 +4,15 @@ local M = {}
 local config = {
   navigate = {
     default = nil,
-    maximized = nil,
+    focused = nil,
   },
   create_commands = true,
 }
 
 local tmux_directions = { left = "L", down = "D", up = "U", right = "R" }
 
-local maximized = false
-local maximized_win = nil
+local focused = false
+local focused_win = nil
 
 --- Retorna apenas os paineis "reais" da aba atual (ignora janelas flutuantes).
 local function real_windows()
@@ -25,10 +25,10 @@ local function real_windows()
   return wins
 end
 
---- Indica se ha um painel maximizado de fato.
---- Considera maximizado somente se a flag interna estiver ativa E existir ao menos um painel vizinho minimizado. 
-function M.is_maximized()
-  if not maximized then
+--- Indica se ha um painel em foco de fato.
+--- Considera em foco somente se a flag interna estiver ativa E existir ao menos um painel vizinho inativo.
+function M.is_focused()
+  if not focused then
     return false
   end
   local wins = real_windows()
@@ -38,9 +38,9 @@ function M.is_maximized()
   local current = vim.api.nvim_get_current_win()
   for _, win in ipairs(wins) do
     if win ~= current then
-      local minimized = vim.api.nvim_win_get_width(win) <= 1
+      local inactive = vim.api.nvim_win_get_width(win) <= 1
         or vim.api.nvim_win_get_height(win) <= 1
-      if minimized then
+      if inactive then
         return true
       end
     end
@@ -48,45 +48,45 @@ function M.is_maximized()
   return false
 end
 
-local function apply_maximize()
+local function apply_focus()
   vim.cmd("wincmd _") -- altura maxima
   vim.cmd("wincmd |") -- largura maxima
 end
 
---- Maximiza o painel atual, minimizando os demais.
-function M.maximize()
+--- Foca o painel atual, deixando os demais inativos.
+function M.focus()
   if #real_windows() <= 1 then
     return
   end
-  maximized_win = vim.api.nvim_get_current_win()
-  apply_maximize()
-  maximized = true
+  focused_win = vim.api.nvim_get_current_win()
+  apply_focus()
+  focused = true
 end
 
---- Restaura/equaliza os paineis, ocupando todo o espaco disponivel atual.
-function M.restore()
+--- Tira o foco/equaliza os paineis, ocupando todo o espaco disponivel atual.
+function M.unfocus()
   vim.cmd("wincmd =")
-  maximized = false
-  maximized_win = nil
+  focused = false
+  focused_win = nil
 end
 
---- Alterna entre maximizar e restaurar.
+--- Alterna entre focar e tirar o foco.
 function M.toggle()
-  if M.is_maximized() then
-    M.restore()
+  if M.is_focused() then
+    M.unfocus()
   else
-    M.maximize()
+    M.focus()
   end
 end
 
 --- Despacha um movimento de navegacao para o handler correto conforme o estado.
 --- param dir string Direcao logica: "left", "down", "up" ou "right".
---- param handlers { default: fun(dir: string), maximized: fun(dir: string) }
+--- param handlers { default: fun(dir: string), focused: fun(dir: string) }
 function M.navigate(dir, handlers)
   handlers = handlers or config.navigate
-  if M.is_maximized() then
-    if handlers.maximized then
-      handlers.maximized(dir)
+  if M.is_focused() then
+    if handlers.focused then
+      handlers.focused(dir)
     elseif vim.env.TMUX then
       -- Padrao para tmux: pula direto para o painel do tmux na direcao
       vim.fn.system("tmux select-pane -" .. tmux_directions[dir])
@@ -107,22 +107,22 @@ function M.setup(opts)
   vim.api.nvim_create_autocmd("VimResized", {
     group = vim.api.nvim_create_augroup("Kamui", { clear = true }),
     callback = function()
-      if not maximized then
+      if not focused then
         return
       end
-      if maximized_win and vim.api.nvim_win_is_valid(maximized_win) then
-        vim.api.nvim_win_call(maximized_win, apply_maximize)
+      if focused_win and vim.api.nvim_win_is_valid(focused_win) then
+        vim.api.nvim_win_call(focused_win, apply_focus)
       else
-        maximized = false
-        maximized_win = nil
+        focused = false
+        focused_win = nil
       end
     end,
   })
 
   if config.create_commands then
-    vim.api.nvim_create_user_command("Maximize", M.maximize, { desc = "Maximizar painel atual" })
-    vim.api.nvim_create_user_command("Unmaximize", M.restore, { desc = "Restaurar/equalizar paineis" })
-    vim.api.nvim_create_user_command("MaximizeToggle", M.toggle, { desc = "Alternar maximizar painel" })
+    vim.api.nvim_create_user_command("Focus", M.focus, { desc = "Focar painel atual" })
+    vim.api.nvim_create_user_command("Unfocus", M.unfocus, { desc = "Tirar foco/equalizar paineis" })
+    vim.api.nvim_create_user_command("FocusToggle", M.toggle, { desc = "Alternar foco do painel" })
   end
 end
 
