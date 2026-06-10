@@ -12,6 +12,7 @@ local config = {
 local tmux_directions = { left = "L", down = "D", up = "U", right = "R" }
 
 local maximized = false
+local maximized_win = nil
 
 --- Retorna apenas os paineis "reais" da aba atual (ignora janelas flutuantes).
 local function real_windows()
@@ -47,13 +48,18 @@ function M.is_maximized()
   return false
 end
 
+local function apply_maximize()
+  vim.cmd("wincmd _") -- altura maxima
+  vim.cmd("wincmd |") -- largura maxima
+end
+
 --- Maximiza o painel atual, minimizando os demais.
 function M.maximize()
   if #real_windows() <= 1 then
     return
   end
-  vim.cmd("wincmd _") -- altura maxima
-  vim.cmd("wincmd |") -- largura maxima
+  maximized_win = vim.api.nvim_get_current_win()
+  apply_maximize()
   maximized = true
 end
 
@@ -61,6 +67,7 @@ end
 function M.restore()
   vim.cmd("wincmd =")
   maximized = false
+  maximized_win = nil
 end
 
 --- Alterna entre maximizar e restaurar.
@@ -96,6 +103,21 @@ end
 --- param opts KamuiConfig
 function M.setup(opts)
   config = vim.tbl_deep_extend("force", config, opts or {})
+
+  vim.api.nvim_create_autocmd("VimResized", {
+    group = vim.api.nvim_create_augroup("Kamui", { clear = true }),
+    callback = function()
+      if not maximized then
+        return
+      end
+      if maximized_win and vim.api.nvim_win_is_valid(maximized_win) then
+        vim.api.nvim_win_call(maximized_win, apply_maximize)
+      else
+        maximized = false
+        maximized_win = nil
+      end
+    end,
+  })
 
   if config.create_commands then
     vim.api.nvim_create_user_command("Maximize", M.maximize, { desc = "Maximizar painel atual" })
