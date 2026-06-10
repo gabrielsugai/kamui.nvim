@@ -16,7 +16,7 @@ return {
   opts = {
     navigate = {
       -- normal navigation: let vim-tmux-navigator decide between nvim/tmux.
-      -- the maximized behavior (jump to the tmux pane) is built in.
+      -- the focused behavior (jump to the tmux pane) is built in.
       default = function(dir)
         vim.cmd(({
           left = "TmuxNavigateLeft",
@@ -28,7 +28,7 @@ return {
     },
   },
   keys = {
-    { "<leader>z", function() require("kamui").toggle() end, desc = "Maximize/restore window" },
+    { "<leader>z", function() require("kamui").toggle() end, desc = "Focus/unfocus window" },
     { "<C-h>", function() require("kamui").navigate("left") end },
     { "<C-j>", function() require("kamui").navigate("down") end },
     { "<C-k>", function() require("kamui").navigate("up") end },
@@ -42,15 +42,15 @@ return {
 ```lua
 {
   navigate = {
-    default = nil,   -- fun(dir): navigation when NOT maximized (required to use navigate)
-    maximized = nil, -- fun(dir): navigation when maximized (optional; defaults to tmux)
+    default = nil, -- fun(dir): navigation when NOT focused (required to use navigate)
+    focused = nil, -- fun(dir): navigation when focused (optional; defaults to tmux)
   },
-  create_commands = true, -- creates :Maximize, :Unmaximize, :MaximizeToggle
+  create_commands = true, -- creates :Focus, :Unfocus, :FocusToggle
 }
 ```
 
 ## Commands
 
-- `:Maximize` — maximize the current window
-- `:Unmaximize` — restore/equalize
-- `:MaximizeToggle` — toggle
+- `:Focus` — focus the current window
+- `:Unfocus` — unfocus/equalize
+- `:FocusToggle` — toggle
