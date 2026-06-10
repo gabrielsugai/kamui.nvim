@@ -12,6 +12,7 @@ local config = {
 local tmux_directions = { left = "L", down = "D", up = "U", right = "R" }
 
 local focused = false
+local focused_win = nil
 
 --- Retorna apenas os paineis "reais" da aba atual (ignora janelas flutuantes).
 local function real_windows()
@@ -47,13 +48,18 @@ function M.is_focused()
   return false
 end
 
+local function apply_focus()
+  vim.cmd("wincmd _") -- altura maxima
+  vim.cmd("wincmd |") -- largura maxima
+end
+
 --- Foca o painel atual, deixando os demais inativos.
 function M.focus()
   if #real_windows() <= 1 then
     return
   end
-  vim.cmd("wincmd _") -- altura maxima
-  vim.cmd("wincmd |") -- largura maxima
+  focused_win = vim.api.nvim_get_current_win()
+  apply_focus()
   focused = true
 end
 
@@ -61,6 +67,7 @@ end
 function M.unfocus()
   vim.cmd("wincmd =")
   focused = false
+  focused_win = nil
 end
 
 --- Alterna entre focar e tirar o foco.
@@ -96,6 +103,21 @@ end
 --- param opts KamuiConfig
 function M.setup(opts)
   config = vim.tbl_deep_extend("force", config, opts or {})
+
+  vim.api.nvim_create_autocmd("VimResized", {
+    group = vim.api.nvim_create_augroup("Kamui", { clear = true }),
+    callback = function()
+      if not focused then
+        return
+      end
+      if focused_win and vim.api.nvim_win_is_valid(focused_win) then
+        vim.api.nvim_win_call(focused_win, apply_focus)
+      else
+        focused = false
+        focused_win = nil
+      end
+    end,
+  })
 
   if config.create_commands then
     vim.api.nvim_create_user_command("Focus", M.focus, { desc = "Focar painel atual" })
